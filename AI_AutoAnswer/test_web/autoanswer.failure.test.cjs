@@ -48,6 +48,38 @@ test('fixture page visibly confirms when the userscript has loaded', () => {
   } finally { page.close(); }
 });
 
+test('diagnostic button reports controls without sending a request or exposing the key', () => {
+  const page = createPage(() => { throw Error('No API request expected'); });
+  try {
+    const button = page.buttons.find(item => item.textContent === '诊断页面');
+    assert.ok(button);
+    button.click();
+    assert.match(page.log(), /DIAG.*适配器 fixture.*选项 4.*下一题 可用/);
+    assert.doesNotMatch(page.log(), /test-only-key|先进先出/);
+  } finally { page.close(); }
+});
+
+test('diagnostic button identifies missing controls without using the API', () => {
+  const page = createPage(() => { throw Error('No API request expected'); });
+  try {
+    page.w.document.querySelector('#options').replaceChildren();
+    page.buttons.find(item => item.textContent === '诊断页面').click();
+    assert.match(page.log(), /DIAG_ERROR.*选项不完整/);
+  } finally { page.close(); }
+});
+
+test('matched URL with changed page marker shows a passive compatibility hint', () => {
+  const dom = new JSDOM(source('index.html'), {
+    url: 'http://127.0.0.1:8765/index.html', runScripts: 'outside-only',
+  });
+  try {
+    dom.window.document.querySelector('.header-badge').remove();
+    dom.window.eval(source('autoanswer.user.js'));
+    assert.match(dom.window.document.querySelector('#aa-tm-unsupported').textContent, /未识别到已配置的练习页面/);
+    assert.equal(dom.window.document.querySelector('#aa-tm-panel'), null);
+  } finally { dom.window.close(); }
+});
+
 async function waitFor(check, timeoutMs = 1500) {
   const end = Date.now() + timeoutMs;
   while (!check()) {
@@ -113,5 +145,20 @@ test('preselected extra choice stops before any new multi-select clicks', async 
     await waitFor(() => /已停止/.test(page.status()));
     assert.match(page.log(), /预先选中了其他选项/);
     assert.deepEqual([...page.w.document.querySelectorAll('#options input:checked')], [inputs[5]]);
+  } finally { page.close(); }
+});
+
+test('run log separates verified selection from correctness and records API latency', async () => {
+  const page = createPage((_w, opts) => {
+    setTimeout(() => opts.onload(response(['B'])), 0);
+    return { abort() { opts.onabort(); } };
+  });
+  try {
+    page.start.click();
+    await waitFor(() => /VERIFY/.test(page.log()));
+    page.stop.click();
+    assert.match(page.log(), /API.*耗时=\d+ms/);
+    assert.match(page.log(), /SUMMARY.*已确认选择=1.*API请求=1/);
+    assert.doesNotMatch(page.log(), /正确率|答对/);
   } finally { page.close(); }
 });

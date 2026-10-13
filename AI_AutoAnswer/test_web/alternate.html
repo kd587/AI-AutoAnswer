@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI AutoAnswer · 第二种本地练习布局</title>
+  <style>
+    body { font: 18px/1.5 system-ui, sans-serif; max-width: 720px; margin: 48px auto; padding: 0 20px; color: #17243b; }
+    main { border: 1px solid #d9e2ef; border-radius: 12px; padding: 28px; }
+    .answer { display: block; padding: 14px; margin: 12px 0; border: 1px solid #d9e2ef; border-radius: 8px; cursor: pointer; }
+    .answer:has(input:checked) { border-color: #3973df; background: #eef4ff; }
+    button { padding: 10px 20px; background: #315ed8; color: white; border: 0; border-radius: 6px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <main id="practice">
+    <p>本地适配器测试 · 非真实考试 · <span class="number"></span></p>
+    <h1 class="stem"></h1>
+    <div class="choices"></div>
+    <p id="done" hidden>练习完成</p>
+    <button class="next" type="button">下一题 →</button>
+    <p>已翻页 <span id="completed">0</span> 题</p>
+  </main>
+  <script src="alternate.js"></script>
+</body>
+</html>

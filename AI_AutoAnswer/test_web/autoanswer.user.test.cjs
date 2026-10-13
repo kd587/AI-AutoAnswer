@@ -1,6 +1,8 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { parseAnswer, readQuestion, selectAdapter, formatRunLogCsv, buildChatRequest } = require('./autoanswer.user.js');
+const { parseAnswer, readQuestion, selectAdapter, formatRunLogCsv, buildChatRequest,
+  createSelectorAdapter } = require('./autoanswer.user.js');
+const { JSDOM } = require('jsdom');
 
 function page({ type = 'single', stem = '1. 哪种结构先进先出？', labels = ['A. 栈', 'B. 队列', 'C. 图'] } = {}) {
   const inputs = labels.map(label => ({
@@ -68,6 +70,69 @@ test('selects only the explicit local fixture adapter', () => {
   assert.equal(selectAdapter(new URL('https://example.com/index.html'), doc), null);
   assert.equal(selectAdapter(new URL('http://127.0.0.1:8765/other.html'), doc), null);
   assert.equal(selectAdapter(new URL('http://127.0.0.1:8765/index.html'), { querySelector: () => null }), null);
+  assert.equal(adapter.canAdvance({ textContent: '提交并进入下一题', disabled: false, hidden: false }), false);
+});
+
+test('selector adapter reads a second native-control layout with exact page matching', () => {
+  const doc = new JSDOM(`<main id="practice"><h2 class="stem">1. 先进先出？</h2>
+    <span class="number">1/5</span>
+    <label class="answer"><input type="radio" name="q"><span>A. 栈</span></label>
+    <label class="answer"><input type="radio" name="q"><span>B. 队列</span></label>
+    <button class="next">下一题 →</button></main>`,
+    { url: 'https://practice.example.test/lesson/quiz' }).window.document;
+  const adapter = createSelectorAdapter({
+    id: 'example', origins: ['https://practice.example.test'], pathname: '/lesson/quiz',
+    marker: '#practice', selectors: { root: '#practice', stem: '.stem',
+      counter: '.number', option: 'label.answer', input: 'input',
+      optionText: 'span', next: 'button.next' },
+  });
+  assert.equal(adapter.matches(new URL(doc.URL), doc), true);
+  assert.equal(adapter.matches(new URL('https://practice.example.test/lesson/other'), doc), false);
+  assert.equal(adapter.matches(new URL('https://elsewhere.example.test/lesson/quiz'), doc), false);
+  const q = adapter.readQuestion(doc);
+  assert.equal(q.type, 'single');
+  assert.equal(q.options.get('B').text, '队列');
+  assert.equal(adapter.isSelected(q.options.get('B')), false);
+  adapter.select(q.options.get('B'));
+  assert.equal(adapter.isSelected(q.options.get('B')), true);
+  assert.equal(adapter.canAdvance(adapter.findNextButton(doc)), true);
+  assert.match(q.fingerprint, /先进先出/);
+});
+
+test('selector adapter refuses submit buttons and incomplete controls', () => {
+  const doc = new JSDOM(`<main id="practice"><h2 class="stem">选择正确答案</h2>
+    <label class="answer"><input type="checkbox"><span>A. 一</span></label>
+    <label class="answer"><input type="checkbox"><span>B. 二</span></label>
+    <button class="next">提交答案</button></main>`,
+    { url: 'https://practice.example.test/lesson/quiz' }).window.document;
+  const adapter = createSelectorAdapter({
+    id: 'example', origins: ['https://practice.example.test'], pathname: '/lesson/quiz',
+    marker: '#practice', selectors: { root: '#practice', stem: '.stem',
+      option: 'label.answer', input: 'input', optionText: 'span', next: 'button.next' },
+  });
+  assert.equal(adapter.readQuestion(doc).type, 'multiple');
+  assert.equal(adapter.canAdvance(adapter.findNextButton(doc)), false);
+  doc.querySelectorAll('input')[1].disabled = true;
+  assert.throws(() => adapter.readQuestion(doc), /不可操作/);
+});
+
+test('selector adapter recognizes completion only after choices disappear', () => {
+  const doc = new JSDOM(`<main id="practice"><h2 class="stem">1. 题目</h2>
+    <p id="done">练习完成</p>
+    <label class="answer"><input type="radio"><span>A. 一</span></label>
+    <label class="answer"><input type="radio"><span>B. 二</span></label>
+    <button class="next">下一题</button></main>`,
+    { url: 'https://practice.example.test/lesson/quiz' }).window.document;
+  const config = {
+    id: 'example', origins: ['https://practice.example.test'], pathname: '/lesson/quiz',
+    marker: '#practice', selectors: { root: '#practice', stem: '.stem',
+      option: 'label.answer', input: 'input', optionText: 'span', next: 'button.next', finished: '#done' },
+  };
+  const adapter = createSelectorAdapter(config);
+  assert.equal(adapter.readQuestion(doc).finished, undefined);
+  doc.querySelectorAll('.answer').forEach(row => row.remove());
+  assert.equal(adapter.readQuestion(doc).finished, true);
+  assert.throws(() => createSelectorAdapter({ ...config, origins: ['*'] }), /精确网址/);
 });
 
 test('exports readable CSV events without API credentials', () => {

@@ -28,5 +28,6 @@ Remove-Item Env:DEEPSEEK_API_KEY
 - `answer_rate`：有效回答题数 / 总题数。
 - `accuracy_answered`：`exact / (exact + incorrect)`；没有有效回答时为 `null`。
 - `accuracy_all`：`exact / total`，把弃答、无效响应和 API 失败计入未答对。
+- `by_type`：分别列出单选和多选的题数、答对、答错、弃答、格式失败与请求失败，避免总体分数掩盖多选题表现。
 
 这是给定数据集的**答案质量**指标，不代表网页识别率、点击可靠性或其他网站的兼容性。公开结果时应同时写明数据来源、题量、题型比例、模型名、日期和是否人工核对标准答案；两道示例题不足以代表真实表现。

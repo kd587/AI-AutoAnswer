@@ -32,16 +32,25 @@ function validateCases(cases) {
 
 async function evaluateCases(cases, request, model = 'deepseek-flash') {
   validateCases(cases);
-  const report = { total: cases.length, exact: 0, incorrect: 0, abstained: 0,
-    invalid: 0, api_errors: 0, prompt_tokens: 0, completion_tokens: 0 };
+  if (!/^[A-Za-z0-9._-]{1,80}$/.test(model)) throw Error('模型名称无效');
+  const counts = () => ({ total: 0, exact: 0, incorrect: 0, abstained: 0,
+    invalid: 0, api_errors: 0 });
+  const report = { ...counts(), total: cases.length, model,
+    by_type: { single: counts(), multiple: counts() },
+    prompt_tokens: 0, completion_tokens: 0 };
+  const record = (type, field) => {
+    report[field]++;
+    report.by_type[type][field]++;
+  };
   for (const item of cases) {
+    report.by_type[item.type].total++;
     const question = { type: item.type, stem: item.stem,
       options: new Map(Object.entries(item.options).map(([label, text]) => [label, { text }])) };
     let response;
     try {
       response = await request(buildChatRequest(question, model));
     } catch (_) {
-      report.api_errors++;
+      record(item.type, 'api_errors');
       continue;
     }
     report.prompt_tokens += response?.usage?.prompt_tokens || 0;
@@ -53,15 +62,16 @@ async function evaluateCases(cases, request, model = 'deepseek-flash') {
       if (value?.is_question === true && value?.can_answer === false &&
           value.question_type === item.type && Array.isArray(value.answers) && value.answers.length === 0 &&
           Object.keys(value).sort().join(',') === 'answers,can_answer,is_question,question_type') {
-        report.abstained++;
+        record(item.type, 'abstained');
         continue;
       }
       const answer = parseAnswer(value, [...question.options.keys()], item.type);
       const expected = new Set(item.expected);
-      if (answer.length === expected.size && answer.every(label => expected.has(label))) report.exact++;
-      else report.incorrect++;
+      if (answer.length === expected.size && answer.every(label => expected.has(label))) {
+        record(item.type, 'exact');
+      } else record(item.type, 'incorrect');
     } catch (_) {
-      report.invalid++;
+      record(item.type, 'invalid');
     }
   }
   report.answer_rate = (report.exact + report.incorrect) / report.total;

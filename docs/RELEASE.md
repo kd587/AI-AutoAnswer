@@ -9,6 +9,8 @@ This checklist applies to a source tag or a Windows binary release. Record resul
 - [ ] Inspect `git diff` and tracked files for API keys, account data, local databases, logs and absolute user paths.
 - [ ] Review the exact `@match` and `@connect` entries. The published fixture script must not silently run on unrelated sites.
 - [ ] Review README, adapter docs and change notes for accurate tested and untested claims.
+- [ ] In a real browser with Tampermonkey, open both local fixture pages, run the diagnostic button, verify stop and CSV export, and record whether the provider was mocked or live.
+- [ ] Keep DOM workflow results separate from answer quality. Publish exact-match results only for an independently labeled dataset and include model, sample size and question-type breakdown.
 
 ## Windows binary release
 

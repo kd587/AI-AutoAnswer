@@ -30,6 +30,11 @@ test('live evaluation request never includes grading answer and reports exact ma
   assert.equal(report.answer_rate, 2 / 3);
   assert.equal(report.accuracy_answered, 1 / 2);
   assert.equal(report.accuracy_all, 1 / 3);
+  assert.equal(report.model, 'deepseek-flash');
+  assert.deepEqual(report.by_type.single, { total: 2, exact: 1, incorrect: 0,
+    abstained: 1, invalid: 0, api_errors: 0 });
+  assert.deepEqual(report.by_type.multiple, { total: 1, exact: 0, incorrect: 1,
+    abstained: 0, invalid: 0, api_errors: 0 });
   assert.equal(seen.length, 3);
   assert.ok(seen.every(payload => !JSON.stringify(payload).includes('expected')));
   assert.ok(seen.every(payload => !JSON.stringify(payload).includes('correct')));
