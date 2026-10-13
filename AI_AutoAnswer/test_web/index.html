@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI AutoAnswer · 本地网页模拟题库</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="questions.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="site-header">
+      <div class="brand-mark" aria-hidden="true">A</div>
+      <div>
+        <div class="eyebrow">LOCAL TEST FIXTURE</div>
+        <div class="brand-title">AI AutoAnswer 模拟题库</div>
+      </div>
+      <span class="header-badge">本地练习 · 非真实考试</span>
+    </header>
+
+    <main class="main-grid">
+      <section class="quiz-card" aria-label="当前题目">
+        <div class="card-top">
+          <div>
+            <span class="section-kicker">选择题测试用例</span>
+            <h1>自动答题流程验证</h1>
+            <p class="subtitle">20 道单选 + 10 道多选，测试识别、选择、状态确认与连续翻页。</p>
+          </div>
+          <span class="question-counter" id="counter">01 / 30</span>
+        </div>
+
+        <div class="progress-track" role="progressbar" aria-label="题目进度" aria-valuemin="0" aria-valuemax="30" aria-valuenow="1" id="progress">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+
+        <div class="question-area" id="question-area" aria-live="polite">
+          <div class="question-meta"><span class="type-chip" id="type-chip">单选题</span><span id="question-id">题目 01</span></div>
+          <h2 id="question-text">正在加载题目…</h2>
+          <div class="diagram" id="diagram" hidden aria-label="先进先出示意图">
+            <span>进入</span><span class="diagram-box">1</span><span class="diagram-box">2</span><span class="diagram-box">3</span><span>离开 →</span>
+          </div>
+          <div class="options" id="options" role="group" aria-label="题目选项"></div>
+          <p class="selection-note" id="selection-note">请选择一个选项</p>
+        </div>
+
+        <div class="card-footer">
+          <span id="load-status" role="status">就绪</span>
+          <button class="next-button" type="button" id="next-button">下一题 <span aria-hidden="true">→</span></button>
+        </div>
+      </section>
+
+      <aside class="side-column">
+        <section class="info-card">
+          <div class="aside-icon" aria-hidden="true">✓</div>
+          <h2>测试说明</h2>
+          <p>这是独立运行的网页题库。每题有清晰的题干、选项标签和选中状态，可作为窗口截图、OCR、控件定位与翻页测试目标。</p>
+          <div class="stat-row"><span>题目总数</span><strong>30</strong></div>
+          <div class="stat-row"><span>已完成</span><strong id="completed-count">0</strong></div>
+          <div class="stat-row"><span>当前题型</span><strong id="current-type">单选</strong></div>
+          <p class="script-status" id="script-status" role="status">未检测到脚本。请从本地 HTTP 地址打开，并确认 Tampermonkey 脚本已启用。</p>
+        </section>
+
+        <details class="settings-card">
+          <summary>测试设置 <span aria-hidden="true">⌄</span></summary>
+          <div class="settings-body">
+            <label class="setting"><input type="checkbox" id="slow-toggle"><span>慢速加载（约 2.5 秒）</span></label>
+            <label class="setting"><input type="checkbox" id="stuck-toggle"><span>模拟下一题加载失败</span></label>
+            <label class="setting"><input type="checkbox" id="unreadable-toggle"><span>模拟选项文字不可识别</span></label>
+            <div class="jump-row">
+              <label for="jump-input">跳到第</label>
+              <input type="number" min="1" max="30" value="1" id="jump-input">
+              <span>题</span>
+              <button type="button" id="jump-button">跳转</button>
+            </div>
+            <button type="button" class="reset-button" id="reset-button">从第 1 题重新开始</button>
+          </div>
+        </details>
+        <p class="aside-footnote">题库本身不联网，也不会提交答案。启动篡改猴脚本后，题干和选项会发送到所配置的 DeepSeek API。推荐通过本地 HTTP 服务访问。</p>
+      </aside>
+    </main>
+  </div>
+</body>
+</html>

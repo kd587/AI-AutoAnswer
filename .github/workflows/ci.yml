@@ -1,0 +1,45 @@
+name: CI
+
+permissions:
+  contents: read
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  browser-fixture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: AI_AutoAnswer/test_web/package-lock.json
+      - name: Install fixture dependencies
+        run: npm --prefix AI_AutoAnswer/test_web ci
+      - name: Check userscript syntax
+        run: node --check AI_AutoAnswer/test_web/autoanswer.user.js
+      - name: Run browser fixture tests
+        run: npm --prefix AI_AutoAnswer/test_web test
+
+  windows-python:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: AI_AutoAnswer/requirements.txt
+      - name: Install desktop dependencies
+        run: python -m pip install -r AI_AutoAnswer/requirements.txt
+      - name: Run Python tests
+        working-directory: AI_AutoAnswer
+        run: python -m pytest -q

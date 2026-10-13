@@ -1,0 +1,6 @@
+_research/
+.env
+.env.*
+*.pfx
+*.p12
+*.pem
