@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { parseAnswer, readQuestion, selectAdapter, formatRunLogCsv } = require('./autoanswer.user.js');
+const { parseAnswer, readQuestion, selectAdapter, formatRunLogCsv, buildChatRequest } = require('./autoanswer.user.js');
 
 function page({ type = 'single', stem = '1. 哪种结构先进先出？', labels = ['A. 栈', 'B. 队列', 'C. 图'] } = {}) {
   const inputs = labels.map(label => ({
@@ -31,6 +31,16 @@ test('reads labeled inputs and the actual question type from DOM', () => {
 test('accepts a matching single and multiple answer', () => {
   assert.deepEqual(parseAnswer('{"is_question":true,"question_type":"single","answers":["B"],"can_answer":true}', ['A', 'B'], 'single'), ['B']);
   assert.deepEqual(parseAnswer({ is_question: true, question_type: 'multiple', answers: ['A', 'C'], can_answer: true }, ['A', 'B', 'C'], 'multiple'), ['A', 'C']);
+});
+
+test('AI request contains visible question and options but no grading answer', () => {
+  const question = readQuestion(page());
+  const payload = buildChatRequest(question, 'deepseek-flash');
+  assert.equal(payload.model, 'deepseek-flash');
+  assert.deepEqual(payload.response_format, { type: 'json_object' });
+  assert.match(payload.messages[1].content, /哪种结构先进先出/);
+  assert.match(payload.messages[1].content, /B\. 队列/);
+  assert.doesNotMatch(JSON.stringify(payload), /correct|expected|标准答案/);
 });
 
 test('rejects invented labels, mismatched type, duplicates and extra fields', () => {

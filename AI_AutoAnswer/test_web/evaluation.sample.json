@@ -1,0 +1,16 @@
+[
+  {
+    "id": "sample-1",
+    "type": "single",
+    "stem": "哪一种数据结构遵循先进先出（FIFO）原则？",
+    "options": { "A": "栈", "B": "队列", "C": "二叉树", "D": "图" },
+    "expected": ["B"]
+  },
+  {
+    "id": "sample-2",
+    "type": "multiple",
+    "stem": "下列哪些是常见的 HTTP 请求方法？",
+    "options": { "A": "GET", "B": "POST", "C": "SELECT", "D": "PUT" },
+    "expected": ["A", "B", "D"]
+  }
+]

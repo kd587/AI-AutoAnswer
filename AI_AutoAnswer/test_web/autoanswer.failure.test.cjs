@@ -12,9 +12,9 @@ const response = answers => ({ status: 200, responseText: JSON.stringify({
   }) } }],
 }) });
 
-function createPage(requestHandler) {
+function createPage(requestHandler, startQuestion = 1) {
   const dom = new JSDOM(source('index.html'), {
-    url: 'http://127.0.0.1:8765/index.html', runScripts: 'outside-only',
+    url: `http://127.0.0.1:8765/index.html?start=${startQuestion}`, runScripts: 'outside-only',
   });
   const w = dom.window;
   w.eval(source('questions.js'));
@@ -94,5 +94,24 @@ test('stop aborts a pending AI request without selecting', async () => {
     assert.equal(aborted, 1);
     assert.match(page.status(), /用户已停止/);
     assert.equal(page.w.document.querySelectorAll('#options input:checked').length, 0);
+  } finally { page.close(); }
+});
+
+test('preselected extra choice stops before any new multi-select clicks', async () => {
+  const page = createPage((_w, opts) => {
+    setTimeout(() => opts.onload({ status: 200, responseText: JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({
+        is_question: true, question_type: 'multiple', answers: ['A', 'C'], can_answer: true,
+      }) } }],
+    }) }), 0);
+    return { abort() { opts.onabort(); } };
+  }, 21);
+  try {
+    const inputs = [...page.w.document.querySelectorAll('#options input')];
+    inputs[5].click();
+    page.start.click();
+    await waitFor(() => /已停止/.test(page.status()));
+    assert.match(page.log(), /预先选中了其他选项/);
+    assert.deepEqual([...page.w.document.querySelectorAll('#options input:checked')], [inputs[5]]);
   } finally { page.close(); }
 });

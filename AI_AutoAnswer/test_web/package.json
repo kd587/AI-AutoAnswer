@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "test": "node --test quiz.test.cjs autoanswer.user.test.cjs autoanswer.failure.test.cjs && node autoanswer.dom.test.cjs"
+    "test": "node --test quiz.test.cjs autoanswer.user.test.cjs autoanswer.failure.test.cjs answer_eval.test.cjs && node autoanswer.dom.test.cjs"
   },
   "devDependencies": {
     "jsdom": "26.1.0"

@@ -39,6 +39,17 @@
     return value.answers;
   }
 
+  function buildChatRequest(question, model) {
+    const lines = [...question.options].map(([label, option]) => `${label}. ${option.text}`).join('\n');
+    const prompt = `题型：${question.type === 'single' ? '单选' : '多选'}\n题目：${question.stem}\n选项：\n${lines}`;
+    return { model, response_format: { type: 'json_object' },
+      thinking: { type: 'disabled' }, max_tokens: 150,
+      messages: [
+        { role: 'system', content: '只返回 JSON 对象，字段严格为 is_question(boolean)、question_type(single 或 multiple)、answers(选项字母数组)、can_answer(boolean)。无法判断时 can_answer=false。不要输出解析、坐标或其他字段。' },
+        { role: 'user', content: prompt },
+      ] };
+  }
+
   function readQuestion(doc) {
     const stem = doc.querySelector('#question-text')?.textContent?.trim() || '';
     if (/练习完成/.test(stem)) return { finished: true };
@@ -101,7 +112,7 @@
 
   // Export pure DOM/JSON checks for the local Node test harness.
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { parseAnswer, readQuestion, selectAdapter, formatRunLogCsv };
+    module.exports = { parseAnswer, readQuestion, selectAdapter, formatRunLogCsv, buildChatRequest };
     return;
   }
 
@@ -180,18 +191,11 @@
 
   function askDeepSeek(question, key, ticket) {
     return new Promise((resolve, reject) => {
-      const lines = [...question.options].map(([label, option]) => `${label}. ${option.text}`).join('\n');
-      const prompt = `题型：${question.type === 'single' ? '单选' : '多选'}\n题目：${question.stem}\n选项：\n${lines}`;
       requests += 1;
       const request = GM_xmlhttpRequest({
         method: 'POST', url: 'https://api.deepseek.com/chat/completions', timeout: 30000,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-        data: JSON.stringify({ model: GM_getValue('model', 'deepseek-flash'), response_format: { type: 'json_object' },
-          thinking: { type: 'disabled' }, max_tokens: 150,
-          messages: [
-            { role: 'system', content: '只返回 JSON 对象，字段严格为 is_question(boolean)、question_type(single 或 multiple)、answers(选项字母数组)、can_answer(boolean)。无法判断时 can_answer=false。不要输出解析、坐标或其他字段。' },
-            { role: 'user', content: prompt },
-          ] }),
+        data: JSON.stringify(buildChatRequest(question, GM_getValue('model', 'deepseek-flash'))),
         onload: response => {
           currentRequest = null;
           if (ticket !== generation) return;
@@ -236,6 +240,10 @@
         if (live.options.size !== question.options.size) throw Error('AI 返回前选项已变化');
         if (JSON.stringify([...live.options].map(([label, option]) => [label, option.text])) !== JSON.stringify(optionSnapshot)) {
           throw Error('AI 返回前选项已变化');
+        }
+        if (live.type === 'multiple' && [...live.options].some(([label, option]) =>
+          adapter.isSelected(option) && !answers.includes(label))) {
+          throw Error('页面预先选中了其他选项；请人工确认');
         }
         for (const answer of answers) {
           const option = live.options.get(answer);
